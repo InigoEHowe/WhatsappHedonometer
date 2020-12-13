@@ -6,8 +6,12 @@ This gives a similar plot to https://hedonometer.org/timeseries/en_all/ going to
 
 # NOTICE: WHEN TOU EXPORT YOUR WHATSAPP DATA IT IS NO LONGER ENCRYPTED. NEVER UPLOAD OR SHARE THIS DATA SOMEWHERE YOU DO NOT TRUST. 
 
+# HOW TO RUN
+1. Change the input parameters in the WhatsappHedonometer.py file
+2. Run WhatsappHedonometer.py
+
 ## INPUT 
-Prior to running the code go into the WhatsappHedonometer file and change the input parameters. The code will not run unless you have changed the following inputs
+Prior to running the code go into the WhatsappHedonometer.py file and change the input parameters. The code will not run unless you have changed the following inputs
 1. whatsapp_data
 2. their_name
 3. your_name
@@ -38,3 +42,5 @@ The following plots are generated.
 - Images are turned into the message <media omitted> when exported, to stop these words dominating I turned this into the word image. 
 - The words processed are only the words conatined in the Hedonometer.csv, if you would likeother words included you can add them to the Hedonometer.csv file.I
 - If you want to do the analysis for a different language you can download other Hedonometer dictonaries from the https://hedonometer.org/timeseries/en_all/  website.
+  
+  If you have any queries or comments feel free to get in contact via GitHub
