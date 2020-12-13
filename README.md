@@ -1,10 +1,10 @@
-# WhatsappHedonometer
+## WhatsappHedonometer
 Generate plots of average word happiness vs date for a WhatsApp chat between
 two people. Additional plots of number and length of messages can be produced. Wordclouds 
 coloured by happiness for the most commonly used words by each person and the 
 amount one person uses a word more than the other are also generated. 
 
-# ABOUT
+## ABOUT
 This gives a similar plot to https://hedonometer.org/timeseries/en_all/ 
 going to this site will give a better description of the method used to 
 generate the happinesss data. This code will take in an exported Whatsapp 
@@ -20,7 +20,7 @@ input parameters. The code will not run unless you have changed the following in
 2. their_name
 3. your_name
 
-# OUTPUT
+## OUTPUT
 The following plots are generated.
 1. A line plot for the number of messages against the date for each user (optional)
 2. A line plot for the average length of messages sent against the date for each user (optional)
