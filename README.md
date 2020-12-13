@@ -22,8 +22,8 @@ The following plots are generated.
 2. A line plot for the average length of messages sent against the date for each user (optional)
 3. A Hedonometer line plot showing the average happiness of words used in the time period against the date. 
 4. A series line plots for each user of how often a word is used in a given period. With the set of words specified in the input.
-5. A Wordcloud for each user showing the most common words used colured according to how happy each word is.
-6. A Wordcloud for how many more times a word is used compared to the other userfor each user coloured  according to how happy each word is. 
+5. A Wordcloud for each user showing the most common words used, colured according to how happy each word is.
+6. A Wordcloud for how many more times a word is used compared to the other user for each user, coloured  according to how happy each word is. 
 
 ## REQUIRMENTS
 - pandas 
