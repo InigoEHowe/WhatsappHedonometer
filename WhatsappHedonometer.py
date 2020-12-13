@@ -70,7 +70,7 @@ def HappinessColorFunc(word, font_size, position,orientation,random_state=None, 
 
     return "rgb({}, {}, 0)".format(r, g)
 
-def GenerateWordCloud(Words_used):
+def GenerateWordCloud(Words_used,name):
     # Make a varibale containing all the words used tobe fed into the wordcloud
     word_count = pd.DataFrame(Words_used.sum(axis=0))
     word_count['words'] = word_count.index
@@ -79,11 +79,12 @@ def GenerateWordCloud(Words_used):
     dic = {}
     for a, x in word_count.values:
         dic[x] = a
-
-    WordCloudFromDic(dic)
+    
+    title = 'Words ' + name + ' used most'
+    WordCloudFromDic(dic,title)
     return
 
-def WordCloudFromDic(dic):
+def WordCloudFromDic(dic,title):
     # This takes in a dict of frequencies of use of various words and plots a word cloud based on them
     # This will exclude common connecting words which can be shown by looking into the STOPWORDS variable. 
     wordcloud = WordCloud(width = 800, height = 800, 
@@ -95,13 +96,13 @@ def WordCloudFromDic(dic):
     wordcloud.recolor(color_func = HappinessColorFunc)
     
     # Generate the plot
-    plt.figure()
+    plt.figure(title)
     plt.imshow(wordcloud, interpolation="bilinear")
     plt.axis("off")
     plt.show()
     return
 
-def GenerateWordCloudMoreUsedWords(Words_used_me,Words_used_them):
+def GenerateWordCloudMoreUsedWords(Words_used_me,Words_used_them,your_name,their_name):
     # Make a varibale containing the number of times we use each word
     word_count_me = pd.DataFrame(Words_used_me.sum(axis=0))
     word_count_me['words'] = word_count_me.index
@@ -126,11 +127,13 @@ def GenerateWordCloudMoreUsedWords(Words_used_me,Words_used_them):
     dic_them = {}
     for a, x in word_count_diff_them.values:
         dic_them[x] = a
-        
-    WordCloudFromDic(dic_me)
-    WordCloudFromDic(dic_them)
+    
+    title = 'Words ' + your_name + ' uses more' 
+    WordCloudFromDic(dic_me,title)
+    title = 'Words ' + their_name + ' uses more' 
+    WordCloudFromDic(dic_them,title)
     return
 
-GenerateWordCloud(Words_used_me)
-GenerateWordCloud(Words_used_them)
-GenerateWordCloudMoreUsedWords(Words_used_me,Words_used_them)
+GenerateWordCloud(Words_used_me,your_name)
+GenerateWordCloud(Words_used_them,their_name)
+GenerateWordCloudMoreUsedWords(Words_used_me,Words_used_them,your_name,their_name)
