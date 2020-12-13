@@ -48,7 +48,7 @@ The following plots are generated.
 # LIMITATIONS AND FURTHER REQUIRMENTS
 - This was built for taking in Whatsapp data with the day/month/year 24 hour 
   format and will not handle other formats.
-- Images are handled by turning them into the word image. 
+- Images are turned into the message <media omitted> to stop these words dominating I turned this into the word image. 
 - Words processed are only words conatined in the Hedonometer.csv if you would like
   other words included you can add them to the Hedonometer.csv file and if you 
   want to do the analysis for a different language you can download other Hedonometer 
