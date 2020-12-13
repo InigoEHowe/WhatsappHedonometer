@@ -13,7 +13,7 @@ def PlotHappiness(Data_me,Data_them,their_name,your_name):
     fig, ax = plt.subplots()
     sns.lineplot(data=Data_me, x="Date", y="Message Happiness",marker='o', ax=ax, label=your_name)
     sns.lineplot(data=Data_them, x="Date", y="Message Happiness",marker='o', ax=ax, label= their_name)
-    ax.set(xlabel="Date", ylabel="Sentiment")
+    ax.set(xlabel="Date", ylabel="Average Happiness")
     return
 
 def PlotOthers(Data_me,Data_them,their_name,your_name):
