@@ -11,8 +11,7 @@ generate the happinesss data. This code will take in an exported Whatsapp
 chat text file. The method to export whatsapp data can be found here
 https://www.youtube.com/watch?v=-Ald352nhao please export it wothout media.
 
-# NOTICE: WHEN TOU EXPORT YOUR WHATSAPP DATA IT IS NO LONGER ENCRYPTED. NEVER 
-# UPLOAD OR SHARE THIS DATA SOMEWHERE YOU DO NOT TRUST. 
+# NOTICE: WHEN TOU EXPORT YOUR WHATSAPP DATA IT IS NO LONGER ENCRYPTED. NEVER UPLOAD OR SHARE THIS DATA SOMEWHERE YOU DO NOT TRUST. 
 
 # INPUT 
 Prior to running the code go into the WhatsappHedonometer file and change the 
