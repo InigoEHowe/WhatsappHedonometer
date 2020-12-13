@@ -13,7 +13,7 @@ https://www.youtube.com/watch?v=-Ald352nhao please export it wothout media.
 
 # NOTICE: WHEN TOU EXPORT YOUR WHATSAPP DATA IT IS NO LONGER ENCRYPTED. NEVER UPLOAD OR SHARE THIS DATA SOMEWHERE YOU DO NOT TRUST. 
 
-# INPUT 
+## INPUT 
 Prior to running the code go into the WhatsappHedonometer file and change the 
 input parameters. The code will not run unless you have changed the following inputs
 1. whatsapp_data
@@ -34,16 +34,16 @@ The following plots are generated.
    for each user coloured  according to how happy each word is. 
 
 ## REQUIRMENTS
-pandas 
-wordcloud 
-matplotlib
-seaborn
-re
-datetime
-tqdm 
-math 
-statistics 
-numpy
+- pandas 
+- wordcloud 
+- matplotlib
+- seaborn
+- re
+- datetime
+- tqdm 
+- math 
+- statistics 
+- numpy
 
 # LIMITATIONS AND FURTHER REQUIRMENTS
 - This was built for taking in Whatsapp data with the day/month/year 24 hour 
