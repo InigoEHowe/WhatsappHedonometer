@@ -42,5 +42,6 @@ The following plots are generated.
 - Images are turned into the message <media omitted> when exported, to stop these words dominating I turned this into the word image. 
 - The words processed are only the words conatined in the Hedonometer.csv, if you would likeother words included you can add them to the Hedonometer.csv file.I
 - If you want to do the analysis for a different language you can download other Hedonometer dictonaries from the https://hedonometer.org/timeseries/en_all/  website.
-  
-  If you have any queries or comments feel free to get in contact via GitHub
+ 
+ # FINALLY
+ This is just meant to be for fun and if you are unhappy in any way I really hope that things get better. Please feel free to get in touch and let me know about any problems or ideas you may have via my twitter @InigoEHowe
