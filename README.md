@@ -9,7 +9,7 @@ This gives a similar plot to https://hedonometer.org/timeseries/en_all/
 going to this site will give a better description of the method used to 
 generate the happinesss data. This code will take in an exported Whatsapp 
 chat text file. The method to export whatsapp data can be found here
-https://www.youtube.com/watch?v=-Ald352nhao please export it wothout media.
+https://www.youtube.com/watch?v=-Ald352nhao please export it without media.
 
 # NOTICE: WHEN TOU EXPORT YOUR WHATSAPP DATA IT IS NO LONGER ENCRYPTED. NEVER UPLOAD OR SHARE THIS DATA SOMEWHERE YOU DO NOT TRUST. 
 
