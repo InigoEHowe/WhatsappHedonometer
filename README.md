@@ -1,8 +1,8 @@
 # WhatsappHedonometer
 Generate plots of average word happiness vs date for a WhatsApp chat between
-two people. Additional plots of number and length of messages and wordclouds 
+two people. Additional plots of number and length of messages can be produced. Wordclouds 
 coloured by happiness for the most commonly used words by each person and the 
-amount one person uses a word more than the other are generated. 
+amount one person uses a word more than the other are also generated. 
 
 # ABOUT
 This gives a similar plot to https://hedonometer.org/timeseries/en_all/ 
