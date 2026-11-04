@@ -1,15 +1,15 @@
 import { parseChat, readChatFile } from './parse.js';
 import * as A from './analysis.js';
 import { demoChat } from './demo.js';
+import { state, $, esc, colourOf, selected, fmtDate, fmtDuration, pct, lineChart, drawChart, fmtBucket, msgLi } from './ui.js';
+import { renderStory, renderOnThisDay } from './story.js';
+import { renderTalk } from './talk.js';
+import { renderTopics } from './topics.js';
+import { setupGames, renderGames } from './games.js';
+import { setupCard, renderCard } from './card.js';
+import { setupAI, aiChatLoaded, renderAI } from './ai.js';
 
-const COLOURS = ['#ff00cc', '#00b8d4', '#ff6a00', '#2ecc00', '#7c4dff', '#e6c300', '#ff1744', '#00c48c'];
 const MAX_PEOPLE = 8;
-const $ = id => document.getElementById(id);
-
-const state = { messages: [], everyone: [], names: [], period: 'week', delh: 1, cloudMode: 'most',
-  track: ['love', 'sorry'], lexicon: null, aiDone: false };
-const charts = {};
-
 const lexiconReady = fetch('labmt.json').then(r => r.json()).then(l => (state.lexicon = l));
 
 // --- loading ---------------------------------------------------------------------------------------
@@ -22,15 +22,15 @@ async function load(text) {
     state.messages = A.enrich(messages, state.lexicon);
     state.everyone = A.people(messages);
     state.names = state.everyone.slice(0, MAX_PEOPLE).map(p => p.name);
-    state.aiDone = false;
-    $('ai-results').hidden = true; $('ai-progress').hidden = true; $('ai-run').disabled = false;
-    showAiEstimate();
+    state.chatKey = [messages.length, +messages[0].date, +messages[messages.length - 1].date, state.everyone.map(p => p.name).join('|')].join('/');
+    await aiChatLoaded(state.chatKey);
     $('results').hidden = false;
     renderPeople();
     render();
     bumpHits();
     $('results').scrollIntoView({ behavior: 'smooth' });
   } catch (e) {
+    console.error(e);
     $('error').textContent = '⚠️ ' + e.message;
     $('error').hidden = false;
   }
@@ -63,14 +63,17 @@ $('track-form').addEventListener('submit', e => {
   state.track = $('track').value.split(',').map(w => w.trim().toLowerCase()).filter(Boolean).slice(0, 6);
   render();
 });
+$('otd-date').addEventListener('change', renderOnThisDay);
+setupGames();
+setupCard();
+setupAI(() => render());
 
 function renderPeople() {
   $('people').innerHTML = '';
-  state.everyone.forEach((p, i) => {
+  for (const p of state.everyone.slice(0, 30)) {
     const label = document.createElement('label');
     label.className = 'chip';
-    const on = state.names.includes(p.name);
-    label.innerHTML = `<input type="checkbox" ${on ? 'checked' : ''}><span class="swatch"></span><span></span>`;
+    label.innerHTML = `<input type="checkbox" ${state.names.includes(p.name) ? 'checked' : ''}><span class="swatch"></span><span></span>`;
     label.lastChild.textContent = `${p.name} (${p.n.toLocaleString()})`;
     label.querySelector('.swatch').style.background = colourOf(p.name);
     label.querySelector('input').addEventListener('change', e => {
@@ -79,55 +82,70 @@ function renderPeople() {
       render();
     });
     $('people').append(label);
-    if (i >= 30) return;
-  });
+  }
 }
-const colourOf = name => COLOURS[state.everyone.findIndex(p => p.name === name) % COLOURS.length];
 
-// --- render ----------------------------------------------------------------------------------------
+// --- tabs: each tab only draws when it is opened, and again when something changes ---------------------
+let activeTab = 'overview';
+const dirty = new Set();
+let cache = {};
+$('tabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  activeTab = b.dataset.tab;
+  for (const x of $('tabs').children) { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); }
+  for (const p of document.querySelectorAll('.tab-panel')) p.hidden = p.dataset.panel !== activeTab;
+  drawTab(activeTab);
+});
+
+const timeline = () => (cache.tl ??= A.timeline(state.messages, state.names, state.period, state.delh, state.period === 'day' ? 5 : 10, state.track));
+const dynamics = () => (cache.dyn ??= A.dynamics(state.messages, state.names));
+
 function render() {
-  const { messages, names, period, delh } = state;
-  if (!messages.length) return;
-  const tl = A.timeline(messages, names, period, delh, period === 'day' ? 5 : 10, state.track);
-  const dyn = A.dynamics(messages, names);
-  renderCounters(dyn);
-  renderOverall();
-  lineChart('ch-happy', tl, b => b.happiness, { yTitle: 'Average word happiness', everyone: names.length > 2 });
-  lineChart('ch-count', tl, b => b.n, { yTitle: 'Messages' });
-  lineChart('ch-len', tl, b => b.avgLen, { yTitle: 'Words per message' });
-  lineChart('ch-laugh', tl, b => b.laughRate, { yTitle: 'Laughs per message' });
-  lineChart('ch-emoji', tl, b => b.emojiRate, { yTitle: 'Emoji per message' });
-  trackChart(tl);
-  if (state.aiDone) lineChart('ch-ai', tl, b => b.ai, { yTitle: 'AI mood (−1 to +1)', everyone: names.length > 2 });
-  renderAwards(dyn);
-  renderDynamics(dyn);
-  renderHeatmap();
-  renderEmoji();
-  renderClouds();
-  renderExtremes('happy-msgs', 'sad-msgs', 'h');
-  if (state.aiDone) renderExtremes('ai-happy', 'ai-sad', 'ai');
-  renderTicker(dyn);
+  if (!state.messages.length) return;
+  cache = {};
+  for (const t of ['overview', 'story', 'talk', 'words', 'ai', 'games']) dirty.add(t);
+  renderCounters();
+  renderTicker();
+  drawTab(activeTab);
 }
 
-const fmtDate = d => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-const fmtBucket = d => state.period === 'month'
-  ? d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' })
-  : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: '2-digit' });
-function fmtDuration(ms) {
-  if (ms == null) return '–';
-  const m = ms / 60e3;
-  if (m < 1) return Math.round(ms / 1e3) + 's';
-  if (m < 60) return Math.round(m) + ' min';
-  if (m < 48 * 60) return (m / 60).toFixed(1) + ' h';
-  return Math.round(m / 1440) + ' days';
+function drawTab(tab) {
+  if (!dirty.has(tab) || !state.messages.length) return;
+  dirty.delete(tab);
+  if (!state.names.length) return;
+  const tl = timeline();
+  if (tab === 'overview') {
+    renderOverall();
+    lineChart('ch-happy', tl, b => b.happiness, { yTitle: 'Average word happiness', everyone: state.names.length > 2 });
+    renderAwards(dynamics());
+    renderCard();
+  }
+  if (tab === 'story') renderStory(dynamics());
+  if (tab === 'talk') {
+    renderTalk();
+    renderDynamics(dynamics());
+    renderHeatmap();
+    lineChart('ch-count', tl, b => b.n, { yTitle: 'Messages' });
+    lineChart('ch-len', tl, b => b.avgLen, { yTitle: 'Words per message' });
+  }
+  if (tab === 'words') {
+    renderTopics();
+    renderEmoji();
+    lineChart('ch-laugh', tl, b => b.laughRate, { yTitle: 'Laughs per message' });
+    lineChart('ch-emoji', tl, b => b.emojiRate, { yTitle: 'Emoji per message' });
+    renderClouds();
+    trackChart(tl);
+    renderExtremes();
+  }
+  if (tab === 'ai') renderAI(tl);
+  if (tab === 'games') renderGames();
 }
-const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-function renderCounters(dyn) {
-  const m = state.messages;
-  const pad = n => String(n).padStart(6, '0');
+// --- overview --------------------------------------------------------------------------------------
+function renderCounters() {
+  const m = state.messages, pad = n => String(n).padStart(6, '0');
   $('c-msgs').textContent = pad(m.length);
-  $('c-days').textContent = pad(dyn.totalDays);
+  $('c-days').textContent = pad(Math.round((m[m.length - 1].date - m[0].date) / 864e5) + 1);
   $('c-words').textContent = pad(m.reduce((a, x) => a + x.words.length, 0));
   $('c-emoji').textContent = pad(m.reduce((a, x) => a + x.emojis.length, 0));
 }
@@ -139,44 +157,6 @@ function renderOverall() {
   }).join('');
 }
 
-Chart.defaults.font.family = "'Comic Neue', 'Comic Sans MS', sans-serif";
-Chart.defaults.font.size = 13;
-Chart.defaults.color = '#000';
-
-function lineChart(id, tl, get, { yTitle, everyone = false }) {
-  const datasets = state.names.map(n => ({
-    label: n, data: tl.per[n].map(get), borderColor: colourOf(n), backgroundColor: colourOf(n),
-    borderWidth: 2.5, pointRadius: state.period === 'day' ? 0 : 3, tension: 0.25, spanGaps: true,
-  }));
-  if (everyone) datasets.push({ label: 'Everyone', data: tl.all.map(get), borderColor: '#000', backgroundColor: '#000',
-    borderDash: [6, 4], borderWidth: 2, pointRadius: 0, tension: 0.25, spanGaps: true });
-  drawChart(id, tl.buckets.map(fmtBucket), datasets, yTitle);
-}
-
-function trackChart(tl) {
-  const datasets = [];
-  state.track.forEach((w, wi) => state.names.forEach(n => datasets.push({
-    label: `“${w}” – ${n}`, data: tl.per[n].map(b => b.track[w]), borderColor: colourOf(n), backgroundColor: colourOf(n),
-    borderDash: wi ? [5, 4] : [], borderWidth: 2, pointRadius: 0, tension: 0.25, spanGaps: true,
-  })));
-  drawChart('ch-track', tl.buckets.map(fmtBucket), datasets, 'Times said per message');
-}
-
-function drawChart(id, labels, datasets, yTitle) {
-  charts[id]?.destroy();
-  charts[id] = new Chart($(id), {
-    type: 'line', data: { labels, datasets },
-    options: {
-      responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
-      interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { labels: { boxWidth: 14 } },
-        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.parsed.y == null ? '–' : (+c.parsed.y.toFixed(3))}` } } },
-      scales: { y: { title: { display: true, text: yTitle } }, x: { ticks: { maxRotation: 45, autoSkipPadding: 12 } } },
-    },
-  });
-}
-
-// --- awards ----------------------------------------------------------------------------------------
 function renderAwards(dyn) {
   const s = dyn.stat, names = state.names.filter(n => s[n].n > 0);
   if (!names.length) { $('awards').innerHTML = ''; return; }
@@ -186,6 +166,7 @@ function renderAwards(dyn) {
   // Skip awards nobody earned, e.g. 'deleted 0 messages'
   const add = (icon, title, who, why) => who && !/(^|\D)0 (messages|questions|times|conversations|photos)/.test(why(who)) &&
     awards.push({ icon, title, who, why });
+  const sum = (n, f) => state.messages.reduce((a, m) => a + (m.author === n ? f(m) : 0), 0);
 
   add('⚡', 'Speed Demon', best(n => s[n].medianReply), n => `replies in ${fmtDuration(s[n].medianReply)} (median)`);
   add('🐢', 'Fashionably Late', best(n => s[n].medianReply, false), n => `takes ${fmtDuration(s[n].medianReply)} to reply`);
@@ -198,9 +179,9 @@ function renderAwards(dyn) {
   add('📜', 'Essay Writer', best(n => s[n].words / s[n].n, false), n => `${(s[n].words / s[n].n).toFixed(1)} words per message`);
   const happy = n => A.overallHappiness(state.messages, n, state.delh);
   add('🌞', 'Ray of Sunshine', best(happy, false), n => `happiest words (${happy(n)?.toFixed(2)})`);
-  const emojiRate = n => state.messages.reduce((a, m) => a + (m.author === n ? m.emojis.length : 0), 0) / s[n].n;
+  const emojiRate = n => sum(n, m => m.emojis.length) / s[n].n;
   add('👑', 'Emoji Monarch', best(emojiRate, false), n => `${emojiRate(n).toFixed(2)} emoji per message`);
-  const laughRate = n => state.messages.reduce((a, m) => a + (m.author === n ? m.laughs : 0), 0) / s[n].n;
+  const laughRate = n => sum(n, m => m.laughs) / s[n].n;
   add('🤣', 'Easily Amused', best(laughRate, false), n => `laughs in ${(laughRate(n) * 100).toFixed(0)}% of messages`);
   add('📸', 'Paparazzi', best(n => rate(n, 'media'), false), n => `sent ${s[n].media.toLocaleString()} photos/videos/stickers`);
   add('🗑️', 'Regrets', best(n => rate(n, 'deleted'), false), n => `deleted ${s[n].deleted.toLocaleString()} messages`);
@@ -209,7 +190,7 @@ function renderAwards(dyn) {
     <span class="who" style="color:${colourOf(a.who)}">${esc(a.who)}</span><span class="why">${esc(a.why(a.who))}</span></div>`).join('');
 }
 
-// --- dynamics --------------------------------------------------------------------------------------
+// --- how we talk -----------------------------------------------------------------------------------
 function renderDynamics(dyn) {
   const facts = [
     [dyn.conversations.length.toLocaleString(), 'conversations (4h+ gap = new one)'],
@@ -231,10 +212,9 @@ function renderDynamics(dyn) {
   $('dyn').innerHTML = `<thead><tr><th></th>${state.names.map(n => `<th>${esc(n)}</th>`).join('')}</tr></thead><tbody>` +
     rows.map(([label, f]) => `<tr><td>${label}</td>${state.names.map(n => `<td>${f(n)}</td>`).join('')}</tr>`).join('') + '</tbody>';
 }
-const pct = (a, b) => b ? Math.round(100 * a / b) + '%' : '–';
 
 function renderHeatmap() {
-  const grid = A.heatmap(state.messages.filter(m => state.names.includes(m.author)));
+  const grid = A.heatmap(selected());
   const max = Math.max(1, ...grid.flat());
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   let html = '<span></span>' + Array.from({ length: 24 }, (_, h) => `<span class="hl">${h % 3 ? '' : h}</span>`).join('');
@@ -248,12 +228,10 @@ function renderHeatmap() {
   });
   $('heatmap').innerHTML = html;
   const peak = grid.flatMap((r, d) => r.map((v, h) => [v, d, h])).sort((a, b) => b[0] - a[0])[0];
-  $('heatmap').insertAdjacentHTML('afterend', '');
-  let legend = $('heatmap').nextElementSibling;
-  if (!legend) { legend = document.createElement('p'); legend.className = 'heat-legend'; $('heatmap').after(legend); }
-  legend.textContent = `🔥 Peak chat time: ${days[peak[1]]}s at ${peak[2]}:00`;
+  $('heat-legend').textContent = `🔥 Peak chat time: ${days[peak[1]]}s at ${peak[2]}:00`;
 }
 
+// --- words & emoji ---------------------------------------------------------------------------------
 function renderEmoji() {
   $('emoji-top').innerHTML = state.names.map(n => {
     const top = A.topEmoji(state.messages, n, 8);
@@ -262,16 +240,25 @@ function renderEmoji() {
   }).join('');
 }
 
+function trackChart(tl) {
+  const datasets = [];
+  state.track.forEach((w, wi) => state.names.forEach(n => datasets.push({
+    label: `“${w}” – ${n}`, data: tl.per[n].map(b => b.track[w]), borderColor: colourOf(n), backgroundColor: colourOf(n),
+    borderDash: wi ? [5, 4] : [], borderWidth: 2, pointRadius: 0, tension: 0.25, spanGaps: true,
+  })));
+  drawChart('ch-track', tl.buckets.map(fmtBucket), datasets, 'Times said per message');
+}
+
 function renderClouds() {
   const counts = Object.fromEntries(state.names.map(n => [n, A.wordCounts(state.messages, n, state.lexicon, state.delh)]));
   $('clouds').innerHTML = state.names.map(n => {
     const list = state.cloudMode === 'most'
-      ? [...counts[n].entries()].sort((a, b) => b[1] - a[1]).slice(0, 60).map(([w, k]) => [w, k])
+      ? [...counts[n].entries()].sort((a, b) => b[1] - a[1]).slice(0, 60)
       : A.distinctiveWords(counts, n, state.names).map(([w, d]) => [w, d]);
     if (!list.length) return `<div class="cloud"><h4>${esc(n)}</h4><p>Not enough words yet!</p></div>`;
     const max = list[0][1], min = list[list.length - 1][1];
     // Shuffle (repeatably) so the big words aren't all at the start
-    const shuffled = list.map((x, i) => [x, Math.sin(i * 99.7) ]).sort((a, b) => a[1] - b[1]).map(x => x[0]);
+    const shuffled = list.map((x, i) => [x, Math.sin(i * 99.7)]).sort((a, b) => a[1] - b[1]).map(x => x[0]);
     const spans = shuffled.map(([w, v]) => {
       const size = 13 + 34 * (max === min ? 1 : Math.sqrt((v - min) / (max - min)));
       const h = state.lexicon[w];
@@ -282,84 +269,21 @@ function renderClouds() {
   }).join('');
 }
 
-function renderExtremes(happyId, sadId, key) {
-  const msgs = state.messages.filter(m => state.names.includes(m.author));
-  const { happiest, saddest } = A.extremeMessages(msgs, state.delh, key, 5);
-  const li = ([m, s]) => `<li>${esc(m.text.length > 220 ? m.text.slice(0, 220) + '…' : m.text)}
-    <span class="meta">— ${esc(m.author)}, ${fmtDate(m.date)} · score ${s.toFixed(2)}</span></li>`;
-  $(happyId).innerHTML = happiest.map(li).join('');
-  $(sadId).innerHTML = saddest.map(li).join('');
+function renderExtremes() {
+  const { happiest, saddest } = A.extremeMessages(selected(), state.delh, 'h', 5);
+  $('happy-msgs').innerHTML = happiest.map(([m, s]) => msgLi(m, ` · score ${s.toFixed(2)}`)).join('');
+  $('sad-msgs').innerHTML = saddest.map(([m, s]) => msgLi(m, ` · score ${s.toFixed(2)}`)).join('');
 }
 
-function renderTicker(dyn) {
-  const s = dyn.stat, n = state.names;
+function renderTicker() {
+  const dyn = dynamics(), s = dyn.stat;
   const bits = [`${state.messages.length.toLocaleString()} messages analysed`,
     `Longest streak: ${dyn.streak.len} days in a row`,
-    ...n.slice(0, 4).map(x => `${x} replies in ${fmtDuration(s[x].medianReply)}`),
+    ...state.names.slice(0, 4).map(x => `${x} replies in ${fmtDuration(s[x].medianReply)}`),
     `Busiest day: ${fmtDate(dyn.busiest.date)} with ${dyn.busiest.n} messages`,
     'Your chat never left your computer'];
   $('ticker').textContent = '*** ' + bits.join(' *** ') + ' ***';
 }
-
-// --- AI sentiment ----------------------------------------------------------------------------------
-// Score each distinct text once: chats repeat 'ok', 'lol' and friends constantly
-function aiTodo() {
-  const byText = new Map();
-  state.messages.forEach((m, i) => {
-    if (!m.text || !m.words.length) return;
-    const key = m.text.toLowerCase();
-    if (!byText.has(key)) byText.set(key, []);
-    byText.get(key).push(i);
-  });
-  return [...byText.entries()];
-}
-
-// Rough speed of the model on a laptop, in messages per second. Long messages are slower
-const AI_RATE = { fast: 25, slow: 10 };
-const AI_MODEL_FILE = 'twitter-roberta-base-sentiment-latest';
-
-async function modelCached() {
-  try {
-    const cache = await caches.open('transformers-cache');
-    return (await cache.keys()).some(r => r.url.includes(AI_MODEL_FILE) && r.url.endsWith('.onnx'));
-  } catch { return false; }
-}
-
-async function showAiEstimate() {
-  const n = aiTodo().length;
-  const avgWords = state.messages.reduce((a, m) => a + m.words.length, 0) / Math.max(1, state.messages.length);
-  const lengthFactor = Math.max(1, avgWords / 8); // the speeds above are for short, text-message sized messages
-  const mins = rate => n / rate * lengthFactor / 60;
-  const lo = mins(AI_RATE.fast), hi = mins(AI_RATE.slow);
-  const span = hi < 1 ? 'under a minute' : lo < 1 ? `up to ${Math.ceil(hi)} min`
-    : hi < 90 ? `about ${Math.round(lo)}–${Math.ceil(hi)} min` : `about ${(lo / 60).toFixed(1)}–${(hi / 60).toFixed(1)} hours`;
-  const download = await modelCached() ? 'model already downloaded' : 'plus a one-time 125 MB download';
-  $('ai-estimate').textContent = `⏱️ ${n.toLocaleString()} different messages to read: ${span} (${download}). Keep this tab open while it runs.`;
-}
-
-$('ai-run').addEventListener('click', () => {
-  const todo = aiTodo();
-  $('ai-estimate').textContent = '';
-  $('ai-run').disabled = true;
-  $('ai-progress').hidden = false;
-  const bar = $('ai-progress').querySelector('.bar'), txt = $('ai-progress').querySelector('.ptext');
-  txt.textContent = 'Downloading the AI brain…';
-  const worker = new Worker('sentiment-worker.js', { type: 'module' });
-  const started = Date.now();
-  worker.onmessage = ({ data }) => {
-    if (data.type === 'download') { bar.style.width = (data.progress || 0) + '%'; txt.textContent = `Downloading the AI brain… ${Math.round(data.progress || 0)}%`; }
-    if (data.type === 'scores') {
-      data.ids.forEach((id, k) => todo[id][1].forEach(i => (state.messages[i].ai = data.scores[k])));
-      bar.style.width = (100 * data.done / data.total) + '%';
-      const eta = (Date.now() - started) / data.done * (data.total - data.done) / 1000;
-      txt.textContent = `Reading messages… ${data.done.toLocaleString()} / ${data.total.toLocaleString()} (about ${Math.ceil(eta / 60)} min left)`;
-      if (data.done % 512 < 16 || data.done === data.total) { state.aiDone = true; $('ai-results').hidden = false; render(); }
-    }
-    if (data.type === 'finished') { txt.textContent = '✅ Done! Vibes read.'; worker.terminate(); state.aiDone = true; render(); }
-    if (data.type === 'error') { txt.textContent = '⚠️ ' + data.message; $('ai-run').disabled = false; worker.terminate(); showAiEstimate(); }
-  };
-  worker.postMessage({ texts: todo.map(([, idx]) => state.messages[idx[0]].text), ids: todo.map((_, k) => k) });
-});
 
 // --- silly extras ----------------------------------------------------------------------------------
 function bumpHits() {

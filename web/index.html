@@ -56,98 +56,217 @@
     </section>
 
     <div class="counter-row">
-      <div class="counter" title="Messages in this chat"><span class="label">MESSAGES</span><span id="c-msgs" class="digits"></span></div>
+      <div class="counter"><span class="label">MESSAGES</span><span id="c-msgs" class="digits"></span></div>
       <div class="counter"><span class="label">DAYS</span><span id="c-days" class="digits"></span></div>
       <div class="counter"><span class="label">WORDS</span><span id="c-words" class="digits"></span></div>
       <div class="counter"><span class="label">EMOJI</span><span id="c-emoji" class="digits"></span></div>
     </div>
 
-    <section class="window wide">
-      <div class="titlebar"><span>😊 Hedonometer.exe</span><span class="tb-buttons">_ □ ×</span></div>
-      <div class="body">
-        <p class="note">Average happiness of the words you use (1 = 😭, 9 = 🥳), from the <a href="https://hedonometer.org" target="_blank" rel="noopener">hedonometer.org</a> word list.</p>
-        <div id="overall" class="overall"></div>
-        <div class="chart tall"><canvas id="ch-happy"></canvas></div>
-      </div>
-    </section>
+    <nav class="tabs" id="tabs" role="tablist">
+      <button role="tab" data-tab="overview" class="on">🏠 Overview</button>
+      <button role="tab" data-tab="story">📖 Our Story</button>
+      <button role="tab" data-tab="talk">💬 How We Talk</button>
+      <button role="tab" data-tab="words">😂 Words &amp; Emoji</button>
+      <button role="tab" data-tab="ai">🤖 AI Lab <span class="new">NEW!</span></button>
+      <button role="tab" data-tab="games">🎮 Games</button>
+    </nav>
 
-    <section class="window wide" id="ai-window">
-      <div class="titlebar"><span>🤖 AI_Mood_Reader.exe <span class="blink new">BETA</span></span><span class="tb-buttons">_ □ ×</span></div>
-      <div class="body">
-        <p class="note">The word list can't tell "happy" from "not happy". This runs a small AI model trained on tweets <b>inside your browser</b>, so it understands negation, slang and emoji. It downloads the model once (about 125&nbsp;MB) — your messages stay here.</p>
-        <div class="row"><button id="ai-run" class="btn">🧠 Read the vibes</button><span id="ai-estimate" class="estimate"></span></div>
-        <div id="ai-progress" class="progress" hidden><div class="bar"></div><span class="ptext"></span></div>
-        <div id="ai-results" hidden>
-          <div class="chart tall"><canvas id="ch-ai"></canvas></div>
-          <div class="two"><div><h3>🌈 Most positive (AI)</h3><ol id="ai-happy" class="msgs"></ol></div>
-            <div><h3>🌧️ Most negative (AI)</h3><ol id="ai-sad" class="msgs"></ol></div></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="window wide">
-      <div class="titlebar"><span>🏆 Hall_of_Fame.exe</span><span class="tb-buttons">_ □ ×</span></div>
-      <div class="body"><div id="awards" class="awards"></div></div>
-    </section>
-
-    <div class="grid">
-      <section class="window">
-        <div class="titlebar"><span>💬 Conversation_Dynamics</span><span class="tb-buttons">_ □ ×</span></div>
+    <!-- OVERVIEW -->
+    <div class="tab-panel" data-panel="overview">
+      <section class="window wide">
+        <div class="titlebar"><span>😊 Hedonometer.exe</span><span class="tb-buttons">_ □ ×</span></div>
         <div class="body">
-          <div id="facts" class="facts"></div>
-          <table id="dyn" class="dyn"></table>
+          <p class="note">Average happiness of the words you use (1 = 😭, 9 = 🥳), from the <a href="https://hedonometer.org" target="_blank" rel="noopener">hedonometer.org</a> word list.</p>
+          <div id="overall" class="overall"></div>
+          <div class="chart tall"><canvas id="ch-happy"></canvas></div>
         </div>
       </section>
-      <section class="window">
-        <div class="titlebar"><span>🔥 When_Do_You_Talk.bmp</span><span class="tb-buttons">_ □ ×</span></div>
-        <div class="body"><div id="heatmap" class="heatmap"></div></div>
+      <section class="window wide">
+        <div class="titlebar"><span>🏆 Hall_of_Fame.exe</span><span class="tb-buttons">_ □ ×</span></div>
+        <div class="body"><div id="awards" class="awards"></div></div>
+      </section>
+      <section class="window wide">
+        <div class="titlebar"><span>🖼️ Year_In_Review.png</span><span class="tb-buttons">_ □ ×</span></div>
+        <div class="body">
+          <div class="row"><label for="card-year" class="label">Year</label><select id="card-year"></select>
+            <button id="card-download" class="btn">💾 Download picture</button></div>
+          <canvas id="card-canvas" class="card-canvas"></canvas>
+        </div>
       </section>
     </div>
 
-    <div class="grid">
-      <section class="window">
-        <div class="titlebar"><span>📈 Messages_Sent</span><span class="tb-buttons">_ □ ×</span></div>
-        <div class="body"><div class="chart"><canvas id="ch-count"></canvas></div></div>
+    <!-- OUR STORY -->
+    <div class="tab-panel" data-panel="story" hidden>
+      <section class="window wide">
+        <div class="titlebar"><span>📖 Chapters.doc</span><span class="tb-buttons">_ □ ×</span></div>
+        <div class="body">
+          <p class="note">Your chat split into eras wherever the pattern changed: how much you talk, how happy and how fast you reply. Each is named after its most typical word.</p>
+          <div id="chapters" class="chapters"></div>
+        </div>
       </section>
-      <section class="window">
-        <div class="titlebar"><span>📏 Words_Per_Message</span><span class="tb-buttons">_ □ ×</span></div>
-        <div class="body"><div class="chart"><canvas id="ch-len"></canvas></div></div>
+      <div class="grid">
+        <section class="window">
+          <div class="titlebar"><span>🎂 Milestones.txt</span><span class="tb-buttons">_ □ ×</span></div>
+          <div class="body"><ul id="milestones" class="milestones"></ul></div>
+        </section>
+        <section class="window">
+          <div class="titlebar"><span>📆 On_This_Day</span><span class="tb-buttons">_ □ ×</span></div>
+          <div class="body">
+            <div class="row"><input type="date" id="otd-date" aria-label="Date"></div>
+            <div id="otd" class="otd"></div>
+          </div>
+        </section>
+      </div>
+      <section class="window wide">
+        <div class="titlebar"><span>📕 Our_Dictionary.hlp</span><span class="tb-buttons">_ □ ×</span></div>
+        <div class="body">
+          <p class="note">Words you use that aren't in the dictionary: nicknames, in-jokes, slang and places. The bar shows who says it more.</p>
+          <div id="our-words" class="dictionary"></div>
+          <h3>🐻 What you call each other</h3>
+          <div id="pet-names"></div>
+        </div>
+      </section>
+      <section class="window wide">
+        <div class="titlebar"><span>🦠 Catching_Words.exe</span><span class="tb-buttons">_ □ ×</span></div>
+        <div class="body">
+          <p class="note">Words and emoji one of you used for a while before the other started using them too.</p>
+          <div id="adoption" class="adoption"></div>
+        </div>
       </section>
     </div>
 
-    <section class="window wide">
-      <div class="titlebar"><span>😂 Emoji_&amp;_LOLs</span><span class="tb-buttons">_ □ ×</span></div>
-      <div class="body">
-        <div id="emoji-top" class="emoji-top"></div>
-        <div class="grid inner">
-          <div><h3>Laugh-o-meter™ (laughs per message)</h3><div class="chart"><canvas id="ch-laugh"></canvas></div></div>
-          <div><h3>Emoji per message</h3><div class="chart"><canvas id="ch-emoji"></canvas></div></div>
-        </div>
+    <!-- HOW WE TALK -->
+    <div class="tab-panel" data-panel="talk" hidden>
+      <section class="window wide">
+        <div class="titlebar"><span>🪪 Texting_Fingerprints</span><span class="tb-buttons">_ □ ×</span></div>
+        <div class="body"><div id="fingerprints" class="cards"></div></div>
+      </section>
+      <div class="grid">
+        <section class="window">
+          <div class="titlebar"><span>🦠 Mood_Contagion™</span><span class="tb-buttons">_ □ ×</span></div>
+          <div class="body">
+            <p class="note">What happens after one of you sends a gloomy message? The tick shows how often it happens normally. <span id="contagion-note"></span></p>
+            <div id="contagion"></div>
+          </div>
+        </section>
+        <section class="window">
+          <div class="titlebar"><span>🙏 Sorry_To_Heart.exe</span><span class="tb-buttons">_ □ ×</span></div>
+          <div class="body"><p class="note">Median time from a “sorry” to a ❤️, “love you” or “it’s ok” from the other side.</p><div id="forgiveness" class="facts"></div></div>
+        </section>
       </div>
-    </section>
-
-    <section class="window wide">
-      <div class="titlebar"><span>☁️ Word_Clouds.gif</span><span class="tb-buttons">_ □ ×</span></div>
-      <div class="body">
-        <p class="note">Green = happy word, red = sad word. Bigger = used more.</p>
-        <div class="seg" id="cloud-mode"><button data-v="most" class="on">Most used</button><button data-v="more">Uses more than the others</button></div>
-        <div id="clouds" class="clouds"></div>
+      <div class="grid">
+        <section class="window">
+          <div class="titlebar"><span>💬 Conversation_Dynamics</span><span class="tb-buttons">_ □ ×</span></div>
+          <div class="body"><div id="facts" class="facts"></div><table id="dyn" class="dyn"></table></div>
+        </section>
+        <section class="window">
+          <div class="titlebar"><span>🔥 When_Do_You_Talk.bmp</span><span class="tb-buttons">_ □ ×</span></div>
+          <div class="body"><div id="heatmap" class="heatmap"></div><p id="heat-legend" class="heat-legend"></p></div>
+        </section>
       </div>
-    </section>
+      <div class="grid">
+        <section class="window">
+          <div class="titlebar"><span>📈 Messages_Sent</span><span class="tb-buttons">_ □ ×</span></div>
+          <div class="body"><div class="chart"><canvas id="ch-count"></canvas></div></div>
+        </section>
+        <section class="window">
+          <div class="titlebar"><span>📏 Words_Per_Message</span><span class="tb-buttons">_ □ ×</span></div>
+          <div class="body"><div class="chart"><canvas id="ch-len"></canvas></div></div>
+        </section>
+      </div>
+    </div>
 
-    <div class="grid">
-      <section class="window">
-        <div class="titlebar"><span>🔍 Word_Tracker</span><span class="tb-buttons">_ □ ×</span></div>
+    <!-- WORDS & EMOJI -->
+    <div class="tab-panel" data-panel="words" hidden>
+      <section class="window wide">
+        <div class="titlebar"><span>🗂️ What_We_Talk_About</span><span class="tb-buttons">_ □ ×</span></div>
+        <div class="body"><div class="chart tall"><canvas id="ch-topics"></canvas></div></div>
+      </section>
+      <section class="window wide">
+        <div class="titlebar"><span>😂 Emoji_&amp;_LOLs</span><span class="tb-buttons">_ □ ×</span></div>
         <div class="body">
-          <form id="track-form" class="row"><input id="track" value="love, sorry" aria-label="Words to track"><button class="btn">Track!</button></form>
-          <div class="chart"><canvas id="ch-track"></canvas></div>
+          <div id="emoji-top" class="emoji-top"></div>
+          <div class="grid inner">
+            <div><h3>Laugh-o-meter™ (laughs per message)</h3><div class="chart"><canvas id="ch-laugh"></canvas></div></div>
+            <div><h3>Emoji per message</h3><div class="chart"><canvas id="ch-emoji"></canvas></div></div>
+          </div>
         </div>
       </section>
-      <section class="window">
-        <div class="titlebar"><span>💌 Happiest_&amp;_Saddest.txt</span><span class="tb-buttons">_ □ ×</span></div>
+      <section class="window wide">
+        <div class="titlebar"><span>☁️ Word_Clouds.gif</span><span class="tb-buttons">_ □ ×</span></div>
         <div class="body">
-          <h3>☀️ Happiest messages</h3><ol id="happy-msgs" class="msgs"></ol>
-          <h3>☔ Saddest messages</h3><ol id="sad-msgs" class="msgs"></ol>
+          <p class="note">Green = happy word, red = sad word. Bigger = used more.</p>
+          <div class="seg" id="cloud-mode"><button data-v="most" class="on">Most used</button><button data-v="more">Uses more than the others</button></div>
+          <div id="clouds" class="clouds"></div>
+        </div>
+      </section>
+      <div class="grid">
+        <section class="window">
+          <div class="titlebar"><span>🔍 Word_Tracker</span><span class="tb-buttons">_ □ ×</span></div>
+          <div class="body">
+            <form id="track-form" class="row"><input id="track" value="love, sorry" aria-label="Words to track"><button class="btn">Track!</button></form>
+            <div class="chart"><canvas id="ch-track"></canvas></div>
+          </div>
+        </section>
+        <section class="window">
+          <div class="titlebar"><span>💌 Happiest_&amp;_Saddest.txt</span><span class="tb-buttons">_ □ ×</span></div>
+          <div class="body">
+            <h3>☀️ Happiest messages</h3><ol id="happy-msgs" class="msgs"></ol>
+            <h3>☔ Saddest messages</h3><ol id="sad-msgs" class="msgs"></ol>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- AI LAB -->
+    <div class="tab-panel" data-panel="ai" hidden>
+      <section class="window wide" id="ai-window">
+        <div class="titlebar"><span>🤖 AI_Mood_Reader.exe <span class="blink new">BETA</span></span><span class="tb-buttons">_ □ ×</span></div>
+        <div class="body">
+          <p class="note">The word list can't tell "happy" from "not happy". This runs an AI model <b>inside your browser</b> that reads each message for 28 emotions, and understands negation, slang and emoji. It downloads the model once (about 125&nbsp;MB) — your messages stay here.</p>
+          <div class="row"><button id="ai-run" class="btn">🧠 Read the vibes</button><span id="ai-estimate" class="estimate"></span>
+            <button id="ai-forget" class="btn small" hidden>🗑️ Forget saved readings</button></div>
+          <div id="ai-progress" class="progress" hidden><div class="bar"></div><span class="ptext"></span></div>
+        </div>
+      </section>
+      <div id="ai-results" hidden>
+        <section class="window wide">
+          <div class="titlebar"><span>📈 AI_Mood.exe</span><span class="tb-buttons">_ □ ×</span></div>
+          <div class="body">
+            <div class="chart tall"><canvas id="ch-ai"></canvas></div>
+            <div class="two"><div><h3>🌈 Most positive</h3><ol id="ai-happy" class="msgs"></ol></div>
+              <div><h3>🌧️ Most negative</h3><ol id="ai-sad" class="msgs"></ol></div></div>
+          </div>
+        </section>
+        <div id="emo-section">
+          <section class="window wide">
+            <div class="titlebar"><span>🎭 Emotions_Over_Time</span><span class="tb-buttons">_ □ ×</span></div>
+            <div class="body"><p class="note">Share of messages where each emotion was the strongest.</p><div class="chart tall"><canvas id="ch-emo"></canvas></div></div>
+          </section>
+          <div class="grid">
+            <section class="window">
+              <div class="titlebar"><span>🧬 Emotional_Fingerprint</span><span class="tb-buttons">_ □ ×</span></div>
+              <div class="body"><div id="emo-profiles" class="cards"></div></div>
+            </section>
+            <section class="window">
+              <div class="titlebar"><span>💌 Most_Emotional_Messages</span><span class="tb-buttons">_ □ ×</span></div>
+              <div class="body"><div class="row"><label for="emo-pick" class="label">Most</label><select id="emo-pick"></select></div><ol id="emo-msgs" class="msgs"></ol></div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GAMES -->
+    <div class="tab-panel" data-panel="games" hidden>
+      <section class="window wide">
+        <div class="titlebar"><span>🎮 Guess_Who.exe</span><span class="tb-buttons">_ □ ×</span></div>
+        <div class="body quiz">
+          <div class="seg" id="quiz-mode"><button data-v="who" class="on">Who said it?</button><button data-v="when">When was it?</button></div>
+          <p id="quiz-q" class="quiz-q"></p>
+          <div id="quiz-a" class="row quiz-a"></div>
+          <p id="quiz-result" class="quiz-result"></p>
+          <div class="row"><button id="quiz-next" class="btn">Next ▶</button><span id="quiz-score" class="quiz-score"></span></div>
         </div>
       </section>
     </div>
