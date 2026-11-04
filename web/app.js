@@ -24,6 +24,7 @@ async function load(text) {
     state.names = state.everyone.slice(0, MAX_PEOPLE).map(p => p.name);
     state.aiDone = false;
     $('ai-results').hidden = true; $('ai-progress').hidden = true; $('ai-run').disabled = false;
+    showAiEstimate();
     $('results').hidden = false;
     renderPeople();
     render();
@@ -301,8 +302,8 @@ function renderTicker(dyn) {
 }
 
 // --- AI sentiment ----------------------------------------------------------------------------------
-$('ai-run').addEventListener('click', () => {
-  // Score each distinct text once: chats repeat 'ok', 'lol' and friends constantly
+// Score each distinct text once: chats repeat 'ok', 'lol' and friends constantly
+function aiTodo() {
   const byText = new Map();
   state.messages.forEach((m, i) => {
     if (!m.text || !m.words.length) return;
@@ -310,7 +311,35 @@ $('ai-run').addEventListener('click', () => {
     if (!byText.has(key)) byText.set(key, []);
     byText.get(key).push(i);
   });
-  const todo = [...byText.entries()];
+  return [...byText.entries()];
+}
+
+// Rough speed of the model on a laptop, in messages per second. Long messages are slower
+const AI_RATE = { fast: 25, slow: 10 };
+const AI_MODEL_FILE = 'twitter-roberta-base-sentiment-latest';
+
+async function modelCached() {
+  try {
+    const cache = await caches.open('transformers-cache');
+    return (await cache.keys()).some(r => r.url.includes(AI_MODEL_FILE) && r.url.endsWith('.onnx'));
+  } catch { return false; }
+}
+
+async function showAiEstimate() {
+  const n = aiTodo().length;
+  const avgWords = state.messages.reduce((a, m) => a + m.words.length, 0) / Math.max(1, state.messages.length);
+  const lengthFactor = Math.max(1, avgWords / 8); // the speeds above are for short, text-message sized messages
+  const mins = rate => n / rate * lengthFactor / 60;
+  const lo = mins(AI_RATE.fast), hi = mins(AI_RATE.slow);
+  const span = hi < 1 ? 'under a minute' : lo < 1 ? `up to ${Math.ceil(hi)} min`
+    : hi < 90 ? `about ${Math.round(lo)}–${Math.ceil(hi)} min` : `about ${(lo / 60).toFixed(1)}–${(hi / 60).toFixed(1)} hours`;
+  const download = await modelCached() ? 'model already downloaded' : 'plus a one-time 125 MB download';
+  $('ai-estimate').textContent = `⏱️ ${n.toLocaleString()} different messages to read: ${span} (${download}). Keep this tab open while it runs.`;
+}
+
+$('ai-run').addEventListener('click', () => {
+  const todo = aiTodo();
+  $('ai-estimate').textContent = '';
   $('ai-run').disabled = true;
   $('ai-progress').hidden = false;
   const bar = $('ai-progress').querySelector('.bar'), txt = $('ai-progress').querySelector('.ptext');
@@ -327,7 +356,7 @@ $('ai-run').addEventListener('click', () => {
       if (data.done % 512 < 16 || data.done === data.total) { state.aiDone = true; $('ai-results').hidden = false; render(); }
     }
     if (data.type === 'finished') { txt.textContent = '✅ Done! Vibes read.'; worker.terminate(); state.aiDone = true; render(); }
-    if (data.type === 'error') { txt.textContent = '⚠️ ' + data.message; $('ai-run').disabled = false; worker.terminate(); }
+    if (data.type === 'error') { txt.textContent = '⚠️ ' + data.message; $('ai-run').disabled = false; worker.terminate(); showAiEstimate(); }
   };
   worker.postMessage({ texts: todo.map(([, idx]) => state.messages[idx[0]].text), ids: todo.map((_, k) => k) });
 });

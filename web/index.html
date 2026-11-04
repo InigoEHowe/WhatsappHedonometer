@@ -75,7 +75,7 @@
       <div class="titlebar"><span>🤖 AI_Mood_Reader.exe <span class="blink new">BETA</span></span><span class="tb-buttons">_ □ ×</span></div>
       <div class="body">
         <p class="note">The word list can't tell "happy" from "not happy". This runs a small AI model trained on tweets <b>inside your browser</b>, so it understands negation, slang and emoji. It downloads the model once (about 125&nbsp;MB) — your messages stay here.</p>
-        <button id="ai-run" class="btn">🧠 Read the vibes</button>
+        <div class="row"><button id="ai-run" class="btn">🧠 Read the vibes</button><span id="ai-estimate" class="estimate"></span></div>
         <div id="ai-progress" class="progress" hidden><div class="bar"></div><span class="ptext"></span></div>
         <div id="ai-results" hidden>
           <div class="chart tall"><canvas id="ch-ai"></canvas></div>
