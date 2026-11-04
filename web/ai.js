@@ -7,8 +7,14 @@ export const EMOTIONS = [['love', '💖', '#ff00cc'], ['joy', '😁', '#ffb300']
   ['caring', '🤗', '#00b8d4'], ['surprise', '😲', '#7c4dff'], ['sadness', '😢', '#2962ff'], ['anger', '😠', '#ff1744'], ['fear', '😰', '#8d6e63']];
 
 const MODEL_FILE = 'roberta-base-go_emotions';
-const AI_RATE = { fast: 25, slow: 10 }; // messages per second on a laptop, for short text-message sized messages
-let onDone = () => {};
+// Messages per second for short, text-message sized messages. Measured ~970/s on an RTX 50 series card, ~35/s on its processor
+const AI_RATE = { gpu: { fast: 1000, slow: 300, download: '500 MB' }, cpu: { fast: 30, slow: 10, download: '125 MB' } };
+let onDone = () => {}, worker = null;
+
+let gpuCheck = null;
+const hasGpu = () => (gpuCheck ??= (async () => {
+  try { return !!(navigator.gpu && await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' })); } catch { return false; }
+})());
 
 // --- saved readings (IndexedDB, this browser only) -------------------------------------------------
 function db() {
@@ -54,10 +60,14 @@ function apply() {
   state.aiDone = Object.keys(readings).length > 0;
 }
 
-async function modelCached() {
+// The graphics card uses the full size model (model.onnx), the processor the compressed one (model_quantized.onnx)
+// Model files are saved in the page's private file storage by sentiment-worker.js
+async function modelCached(gpu) {
   try {
-    const cache = await caches.open('transformers-cache');
-    return (await cache.keys()).some(r => r.url.includes(MODEL_FILE) && r.url.endsWith('.onnx'));
+    const dir = await navigator.storage.getDirectory();
+    const file = gpu ? '_model.onnx' : '_model_quantized.onnx';
+    for await (const name of dir.keys()) if (name.includes(MODEL_FILE) && name.endsWith(file)) return true;
+    return false;
   } catch { return false; }
 }
 
@@ -67,13 +77,14 @@ async function showEstimate() {
   if (!todo.length) { $('ai-estimate').textContent = `✅ All ${done.toLocaleString()} messages read (saved in this browser).`; $('ai-run').hidden = true; return; }
   $('ai-run').hidden = false;
   $('ai-run').textContent = done ? `🧠 Carry on reading (${todo.length.toLocaleString()} left)` : '🧠 Read the vibes';
+  const gpu = await hasGpu(), rate = AI_RATE[gpu ? 'gpu' : 'cpu'];
   const avgWords = state.messages.reduce((a, m) => a + m.words.length, 0) / Math.max(1, state.messages.length);
-  const mins = rate => todo.length / rate * Math.max(1, avgWords / 8) / 60;
-  const lo = mins(AI_RATE.fast), hi = mins(AI_RATE.slow);
+  const mins = r => todo.length / r * Math.max(1, avgWords / 8) / 60;
+  const lo = mins(rate.fast), hi = mins(rate.slow);
   const span = hi < 1 ? 'under a minute' : lo < 1 ? `up to ${Math.ceil(hi)} min`
     : hi < 90 ? `about ${Math.round(lo)}–${Math.ceil(hi)} min` : `about ${(lo / 60).toFixed(1)}–${(hi / 60).toFixed(1)} hours`;
-  const download = await modelCached() ? 'model already downloaded' : 'plus a one-time 125 MB download';
-  $('ai-estimate').textContent = `⏱️ ${todo.length.toLocaleString()} different messages to read: ${span} (${download}). Progress is saved, so you can close the tab and carry on later.`;
+  const download = await modelCached(gpu) ? 'model already downloaded' : `plus a one-time ${rate.download} download`;
+  $('ai-estimate').textContent = `⏱️ ${todo.length.toLocaleString()} different messages to read on your ${gpu ? 'graphics card 🚀' : 'processor'}: ${span} (${download}). You can stop any time and carry on later.`;
 }
 
 export async function aiChatLoaded(chatKey) {
@@ -93,19 +104,33 @@ export function setupAI(rerender) {
     state.aiDone = false; $('ai-forget').hidden = true;
     showEstimate(); onDone();
   });
-  $('ai-run').addEventListener('click', () => {
+  $('ai-stop').addEventListener('click', () => {
+    if (!worker) return;
+    worker.terminate(); worker = null;
+    save(state.chatKey, { readings }); apply();
+    $('ai-stop').hidden = true; $('ai-run').disabled = false;
+    $('ai-progress').querySelector('.ptext').textContent = '⏸ Stopped. Progress saved.';
+    $('ai-forget').hidden = !state.aiDone;
+    showEstimate(); onDone();
+  });
+  $('ai-run').addEventListener('click', async () => {
     const byText = distinctTexts();
     const todo = [...byText.keys()].filter(k => !readings[k]);
     const chatKey = state.chatKey;
     $('ai-run').disabled = true; $('ai-estimate').textContent = '';
-    $('ai-progress').hidden = false;
+    $('ai-progress').hidden = false; $('ai-stop').hidden = false;
     const bar = $('ai-progress').querySelector('.bar'), txt = $('ai-progress').querySelector('.ptext');
+    bar.style.width = '0%';
     txt.textContent = 'Downloading the AI brain…';
-    const worker = new Worker('sentiment-worker.js', { type: 'module' });
+    const useGpu = await hasGpu();
+    worker?.terminate();
+    const w = worker = new Worker('sentiment-worker.js', { type: 'module' });
+    const end = () => { w.terminate(); if (worker === w) worker = null; $('ai-stop').hidden = true; };
     const started = Date.now();
     let sinceSave = 0;
-    worker.onmessage = ({ data }) => {
-      if (state.chatKey !== chatKey) { worker.terminate(); return; } // a different chat was loaded
+    w.onmessage = ({ data }) => {
+      if (state.chatKey !== chatKey) { end(); return; } // a different chat was loaded
+      if (data.type === 'ready') txt.textContent = `Warming up on your ${data.model.includes('graphics') ? 'graphics card 🚀' : 'processor'}…`;
       if (data.type === 'download') { bar.style.width = (data.progress || 0) + '%'; txt.textContent = `Downloading the AI brain… ${Math.round(data.progress || 0)}%`; }
       if (data.type === 'scores') {
         data.ids.forEach((id, k) => (readings[todo[id]] = data.scores[k]));
@@ -117,10 +142,10 @@ export function setupAI(rerender) {
           sinceSave = 0; save(chatKey, { readings }); apply(); $('ai-forget').hidden = false; onDone();
         }
       }
-      if (data.type === 'finished') { txt.textContent = '✅ Done! Vibes read.'; worker.terminate(); save(chatKey, { readings }); apply(); showEstimate(); onDone(); }
-      if (data.type === 'error') { txt.textContent = '⚠️ ' + data.message; $('ai-run').disabled = false; worker.terminate(); showEstimate(); }
+      if (data.type === 'finished') { txt.textContent = '✅ Done! Vibes read.'; end(); save(chatKey, { readings }); apply(); showEstimate(); onDone(); }
+      if (data.type === 'error') { txt.textContent = '⚠️ ' + data.message; $('ai-run').disabled = false; end(); showEstimate(); }
     };
-    worker.postMessage({ texts: todo.map(k => state.messages[byText.get(k)[0]].text), ids: todo.map((_, k) => k) });
+    w.postMessage({ useGpu, texts: todo.map(k => state.messages[byText.get(k)[0]].text), ids: todo.map((_, k) => k) });
   });
   $('emo-pick').innerHTML = EMOTIONS.map(([e, icon], i) => `<option value="${i}">${icon} ${e}</option>`).join('');
   $('emo-pick').addEventListener('change', renderEmotionMessages);
