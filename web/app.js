@@ -8,6 +8,7 @@ import { renderTopics } from './topics.js';
 import { setupGames, renderGames } from './games.js';
 import { setupCard, renderCard } from './card.js';
 import { setupAI, aiChatLoaded, renderAI } from './ai.js';
+import { setupStoryteller } from './storyteller.js';
 
 const MAX_PEOPLE = 8;
 const lexiconReady = fetch('labmt.json').then(r => r.json()).then(l => (state.lexicon = l));
@@ -67,6 +68,7 @@ $('otd-date').addEventListener('change', renderOnThisDay);
 setupGames();
 setupCard();
 setupAI(() => render());
+setupStoryteller();
 
 function renderPeople() {
   $('people').innerHTML = '';

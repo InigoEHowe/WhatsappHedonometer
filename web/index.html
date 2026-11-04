@@ -101,6 +101,17 @@
         <div class="titlebar"><span>📖 Chapters.doc</span><span class="tb-buttons">_ □ ×</span></div>
         <div class="body">
           <p class="note">Your chat split into eras wherever the pattern changed: how much you talk, how happy and how fast you reply. Each is named after its most typical word.</p>
+          <div id="storyteller" class="storyteller" hidden>
+            <p class="note">✍️ <b>The Storyteller</b> <span class="new">NEW!</span> A language model running <b>on your graphics card</b> reads a sample of each chapter's messages and writes it up. Nothing leaves your computer. It can get details wrong, so take it with a pinch of salt!</p>
+            <div class="row">
+              <select id="story-model" aria-label="Storyteller model"></select>
+              <button id="story-run" class="btn">✍️ Write our story</button>
+              <button id="story-stop" class="btn" hidden>⏸ Stop</button>
+            </div>
+            <p id="story-estimate" class="estimate story-estimate"></p>
+            <div id="story-progress" class="progress" hidden><div class="bar"></div><span class="ptext"></span></div>
+          </div>
+          <p id="story-blurb" class="story-blurb" hidden></p>
           <div id="chapters" class="chapters"></div>
         </div>
       </section>

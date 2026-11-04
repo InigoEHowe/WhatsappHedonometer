@@ -11,7 +11,7 @@ The `web/` folder is a version that runs entirely in your browser: drop in your 
 
 It's split into tabs:
 - **Overview**: the hedonometer, a Hall of Fame of awards (Speed Demon, Night Owl, Double Texter, Left on Read...) and a downloadable year in review picture
-- **Our Story**: the chat split into chapters wherever the pattern changes, milestones (first "love you", message number 10,000...), on this day, your own dictionary of in-jokes and slang, what you call each other, and which words one of you caught from the other
+- **Our Story**: the chat split into chapters wherever the pattern changes, with an optional storyteller (a language model running on your graphics card through [WebLLM](https://github.com/mlc-ai/web-llm)) that writes a short recap of each chapter, milestones (first "love you", message number 10,000...), on this day, your own dictionary of in-jokes and slang, what you call each other, and which words one of you caught from the other
 - **How We Talk**: texting fingerprints, mood contagion (what happens after a gloomy message), how long a sorry takes to be forgiven, who starts conversations, reply times, streaks and a heatmap of when you talk
 - **Words & Emoji**: what you talk about over time, top emoji, a Laugh-o-meter, happiness coloured word clouds, a word tracker and the happiest and saddest messages
 - **AI Lab**: an emotion model ([roberta-base-go_emotions](https://huggingface.co/SamLowe/roberta-base-go_emotions-onnx)) that runs inside the browser and reads each message for 28 emotions, understanding negation, slang and emoji. The model (about 125 MB) is downloaded once from Hugging Face; your messages stay on your computer. Readings are saved in your browser so a long chat can be read over several sessions

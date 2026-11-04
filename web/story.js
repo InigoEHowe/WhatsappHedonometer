@@ -1,6 +1,7 @@
 // The "Our Story" tab: chapters, milestones, on this day, your own dictionary, pet names and who caught whose words
 import { state, $, esc, who, fmtDate, fmtMonth, fmtDuration, selected, msgLi, colourOf } from './ui.js';
 import { bucketList, bucketStart } from './analysis.js';
+import { chaptersReady } from './storyteller.js';
 
 const DAY = 864e5;
 
@@ -222,8 +223,10 @@ export function renderStory(dyn) {
       <span class="ch-dates">${fmtMonth(c.start)} – ${fmtMonth(c.end)}</span>
       <span class="ch-emoji">${c.emojis.join(' ') || '&nbsp;'}</span>
       <ul><li>💬 ${c.perDay.toFixed(1)} messages a day</li><li>${mood}</li><li>⚡ replies in ${fmtDuration(c.reply)}</li></ul>
-      <p class="ch-words">${c.words.slice(1).map(w => `<span>${esc(w)}</span>`).join('')}</p></div>`;
+      <p class="ch-words">${c.words.slice(1).map(w => `<span>${esc(w)}</span>`).join('')}</p>
+      <p class="ch-story" data-ch="${c.n}" hidden></p></div>`;
   }).join('') : '<p>Chapters need at least 4 months of messages.</p>';
+  chaptersReady(chs, msgs);
 
   $('milestones').innerHTML = milestones(msgs, dyn).map(x => `<li><span class="ms-icon">${x.icon}</span><span class="ms-date">${fmtDate(x.date)}</span>
     <span class="ms-label">${esc(x.label)}${x.m ? `: <q>${esc(x.m.text.slice(0, 120) || '📷')}</q> <small>– ${esc(x.m.author)}</small>` : ''}</span></li>`).join('');

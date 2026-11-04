@@ -25,13 +25,13 @@ function db() {
     req.onerror = () => reject(req.error);
   });
 }
-async function loadSaved(key) {
+export async function loadSaved(key) {
   try {
     const d = await db();
     return await new Promise(r => { const q = d.transaction('ai').objectStore('ai').get(key); q.onsuccess = () => r(q.result || null); q.onerror = () => r(null); });
   } catch { return null; }
 }
-async function save(key, value) {
+export async function save(key, value) {
   try { const d = await db(); d.transaction('ai', 'readwrite').objectStore('ai').put(value, key); } catch { /* storage blocked: readings just won't survive a reload */ }
 }
 async function forget(key) {
