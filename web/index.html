@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WhatsApp Hedonometer 2000</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+<div class="stars" aria-hidden="true"></div>
+
+<header>
+  <div class="construction" aria-hidden="true"></div>
+  <h1 class="rainbow">~*~ WhatsApp Hedonometer 2000 ~*~</h1>
+  <p class="tagline">How <b>happy</b> is your chat?? Find out NOW!!! <span class="blink new">NEW!</span></p>
+  <div class="marquee" aria-hidden="true"><span id="ticker">*** Welcome to the WhatsApp Hedonometer *** Drop in your chat export below *** 100% private: your chat never leaves your computer *** Best viewed at 800x600 ***</span></div>
+</header>
+
+<main>
+  <section class="window" id="upload-window">
+    <div class="titlebar"><span>📂 Load_Chat.exe</span><span class="tb-buttons">_ □ ×</span></div>
+    <div class="body">
+      <label class="dropzone" id="dropzone">
+        <input type="file" id="file" accept=".txt,.zip" hidden>
+        <span class="big">💾 Drop your WhatsApp export here 💾</span>
+        <span>(or click to browse: the .txt, or the .zip from iPhone)</span>
+      </label>
+      <div class="row">
+        <button id="demo" class="btn">✨ Try a demo chat ✨</button>
+        <details class="howto"><summary>How do I export a chat?</summary>
+          <p>Open the chat in WhatsApp → tap the name at the top (iPhone) or ⋮ → More (Android) → <b>Export chat</b> → <b>Without media</b>. Save the file and drop it here.</p>
+        </details>
+      </div>
+      <p class="privacy">🔒 Your chat is read by this page on your own device. It is never uploaded anywhere.</p>
+      <p id="error" class="error" hidden></p>
+    </div>
+  </section>
+
+  <div id="results" hidden>
+    <section class="window">
+      <div class="titlebar"><span>⚙️ Control_Panel</span><span class="tb-buttons">_ □ ×</span></div>
+      <div class="body controls">
+        <div class="control"><span class="label">Time period</span>
+          <div class="seg" id="period">
+            <button data-v="day">Day</button><button data-v="week" class="on">Week</button><button data-v="month">Month</button>
+          </div>
+        </div>
+        <div class="control"><label class="label" for="delh">Ignore neutral words (Δh = <b id="delh-v">1</b>)</label>
+          <input type="range" id="delh" min="0" max="2.5" step="0.5" value="1"></div>
+        <div class="control"><span class="label">People</span><div id="people" class="chips"></div></div>
+      </div>
+    </section>
+
+    <div class="counter-row">
+      <div class="counter" title="Messages in this chat"><span class="label">MESSAGES</span><span id="c-msgs" class="digits"></span></div>
+      <div class="counter"><span class="label">DAYS</span><span id="c-days" class="digits"></span></div>
+      <div class="counter"><span class="label">WORDS</span><span id="c-words" class="digits"></span></div>
+      <div class="counter"><span class="label">EMOJI</span><span id="c-emoji" class="digits"></span></div>
+    </div>
+
+    <section class="window wide">
+      <div class="titlebar"><span>😊 Hedonometer.exe</span><span class="tb-buttons">_ □ ×</span></div>
+      <div class="body">
+        <p class="note">Average happiness of the words you use (1 = 😭, 9 = 🥳), from the <a href="https://hedonometer.org" target="_blank" rel="noopener">hedonometer.org</a> word list.</p>
+        <div id="overall" class="overall"></div>
+        <div class="chart tall"><canvas id="ch-happy"></canvas></div>
+      </div>
+    </section>
+
+    <section class="window wide" id="ai-window">
+      <div class="titlebar"><span>🤖 AI_Mood_Reader.exe <span class="blink new">BETA</span></span><span class="tb-buttons">_ □ ×</span></div>
+      <div class="body">
+        <p class="note">The word list can't tell "happy" from "not happy". This runs a small AI model trained on tweets <b>inside your browser</b>, so it understands negation, slang and emoji. It downloads the model once (about 125&nbsp;MB) — your messages stay here.</p>
+        <button id="ai-run" class="btn">🧠 Read the vibes</button>
+        <div id="ai-progress" class="progress" hidden><div class="bar"></div><span class="ptext"></span></div>
+        <div id="ai-results" hidden>
+          <div class="chart tall"><canvas id="ch-ai"></canvas></div>
+          <div class="two"><div><h3>🌈 Most positive (AI)</h3><ol id="ai-happy" class="msgs"></ol></div>
+            <div><h3>🌧️ Most negative (AI)</h3><ol id="ai-sad" class="msgs"></ol></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="window wide">
+      <div class="titlebar"><span>🏆 Hall_of_Fame.exe</span><span class="tb-buttons">_ □ ×</span></div>
+      <div class="body"><div id="awards" class="awards"></div></div>
+    </section>
+
+    <div class="grid">
+      <section class="window">
+        <div class="titlebar"><span>💬 Conversation_Dynamics</span><span class="tb-buttons">_ □ ×</span></div>
+        <div class="body">
+          <div id="facts" class="facts"></div>
+          <table id="dyn" class="dyn"></table>
+        </div>
+      </section>
+      <section class="window">
+        <div class="titlebar"><span>🔥 When_Do_You_Talk.bmp</span><span class="tb-buttons">_ □ ×</span></div>
+        <div class="body"><div id="heatmap" class="heatmap"></div></div>
+      </section>
+    </div>
+
+    <div class="grid">
+      <section class="window">
+        <div class="titlebar"><span>📈 Messages_Sent</span><span class="tb-buttons">_ □ ×</span></div>
+        <div class="body"><div class="chart"><canvas id="ch-count"></canvas></div></div>
+      </section>
+      <section class="window">
+        <div class="titlebar"><span>📏 Words_Per_Message</span><span class="tb-buttons">_ □ ×</span></div>
+        <div class="body"><div class="chart"><canvas id="ch-len"></canvas></div></div>
+      </section>
+    </div>
+
+    <section class="window wide">
+      <div class="titlebar"><span>😂 Emoji_&amp;_LOLs</span><span class="tb-buttons">_ □ ×</span></div>
+      <div class="body">
+        <div id="emoji-top" class="emoji-top"></div>
+        <div class="grid inner">
+          <div><h3>Laugh-o-meter™ (laughs per message)</h3><div class="chart"><canvas id="ch-laugh"></canvas></div></div>
+          <div><h3>Emoji per message</h3><div class="chart"><canvas id="ch-emoji"></canvas></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="window wide">
+      <div class="titlebar"><span>☁️ Word_Clouds.gif</span><span class="tb-buttons">_ □ ×</span></div>
+      <div class="body">
+        <p class="note">Green = happy word, red = sad word. Bigger = used more.</p>
+        <div class="seg" id="cloud-mode"><button data-v="most" class="on">Most used</button><button data-v="more">Uses more than the others</button></div>
+        <div id="clouds" class="clouds"></div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="window">
+        <div class="titlebar"><span>🔍 Word_Tracker</span><span class="tb-buttons">_ □ ×</span></div>
+        <div class="body">
+          <form id="track-form" class="row"><input id="track" value="love, sorry" aria-label="Words to track"><button class="btn">Track!</button></form>
+          <div class="chart"><canvas id="ch-track"></canvas></div>
+        </div>
+      </section>
+      <section class="window">
+        <div class="titlebar"><span>💌 Happiest_&amp;_Saddest.txt</span><span class="tb-buttons">_ □ ×</span></div>
+        <div class="body">
+          <h3>☀️ Happiest messages</h3><ol id="happy-msgs" class="msgs"></ol>
+          <h3>☔ Saddest messages</h3><ol id="sad-msgs" class="msgs"></ol>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <p>You are visitor number <span id="hits" class="digits small">000001</span> to this page on this computer</p>
+  <p>Made with 💖 and Notepad. Original Python hedonometer by <a href="https://github.com/InigoEHowe/WhatsappHedonometer" target="_blank" rel="noopener">InigoEHowe</a>. Happiness scores from <a href="https://hedonometer.org" target="_blank" rel="noopener">hedonometer.org</a>.</p>
+  <p class="blink">~ Sign my guestbook ~ (there is no guestbook)</p>
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
