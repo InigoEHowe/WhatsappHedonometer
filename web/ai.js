@@ -167,17 +167,19 @@ export function renderAI(tl) {
   // Share of messages where each emotion is the strongest one
   const size = state.period === 'day' ? 'week' : state.period;
   const buckets = bucketList(selected(), size), index = new Map(buckets.map((d, i) => [+d, i]));
-  const counts = EMOTIONS.map(() => buckets.map(() => 0)), totals = buckets.map(() => 0);
+  // The last row counts messages with no strong emotion ('ok', 'on my way'), so the bands add up to 100%
+  const counts = [...EMOTIONS, null].map(() => buckets.map(() => 0)), totals = buckets.map(() => 0);
   for (const m of msgs) {
     const i = index.get(+bucketStart(m.date, size));
     totals[i]++;
     const top = m.emo.indexOf(Math.max(...m.emo));
-    if (m.emo[top] > 0.3) counts[top][i]++;
+    counts[m.emo[top] > 0.3 ? top : EMOTIONS.length][i]++;
   }
-  drawChart('ch-emo', buckets.map(fmtBucket), EMOTIONS.map(([e, icon, c], k) => ({
+  const bands = [...EMOTIONS, ['no strong emotion', '😐', '#c8c8c8']];
+  drawChart('ch-emo', buckets.map(fmtBucket), bands.map(([e, icon, c], k) => ({
     label: `${icon} ${e}`, data: counts[k].map((v, i) => totals[i] >= 5 ? 100 * v / totals[i] : null),
-    backgroundColor: c + 'cc', borderColor: c, fill: true, pointRadius: 0, tension: 0.3, spanGaps: true,
-  })), '% of messages', { stacked: true });
+    backgroundColor: c + 'cc', borderColor: c, fill: true, pointRadius: 0, tension: 0.2, spanGaps: true,
+  })), '% of messages', { stacked: true, yMax: 100 });
 
   // Each person's emotional fingerprint
   $('emo-profiles').innerHTML = state.names.map(n => {
