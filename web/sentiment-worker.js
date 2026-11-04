@@ -65,10 +65,13 @@ async function load(useGpu) {
 function score(labels) {
   const p = Object.fromEntries(labels.map(({ label, score }) => [label.toLowerCase(), score]));
   if ('positive' in p) return [Math.round(1000 * ((p.positive || 0) - (p.negative || 0))) / 1000];
-  let mood = 0;
-  for (const [l, s] of Object.entries(p)) mood += POSITIVE.has(l) ? s : NEGATIVE.has(l) ? -s : 0;
+  // Each emotion is scored on its own, so several can be near 1 at once. Positive minus negative as a share of
+  // everything detected (including 'neutral') keeps the mood spread out instead of piling up at exactly +1 or -1
+  let pos = 0, neg = 0;
+  for (const [l, s] of Object.entries(p)) { if (POSITIVE.has(l)) pos += s; if (NEGATIVE.has(l)) neg += s; }
+  const mood = (pos - neg) / (pos + neg + (p.neutral || 0) + 1e-6);
   const groups = Object.values(GROUPS).map(ls => Math.min(1, ls.reduce((a, l) => a + (p[l] || 0), 0)));
-  return [Math.max(-1, Math.min(1, mood)), ...groups].map(v => Math.round(1000 * v) / 1000);
+  return [mood, ...groups].map(v => Math.round(1000 * v) / 1000);
 }
 
 onmessage = async ({ data }) => {

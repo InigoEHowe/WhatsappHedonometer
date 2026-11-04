@@ -194,15 +194,29 @@ export function topEmoji(messages, name, top = 10) {
 }
 
 export function extremeMessages(messages, delh, key = 'h', n = 5) {
-  // Each distinct text once, so 'love you' sent 300 times doesn't fill the list
-  const seen = new Set();
-  messages = messages.filter(m => { const k = m.text.toLowerCase(); return !seen.has(k) && seen.add(k); });
+  // Each distinct text once, so 'love you' sent 300 times doesn't fill the list. Use the middle time it was
+  // sent rather than the first, so repeated phrases don't pull the list towards the start of the chat
+  const byText = new Map();
+  for (const m of messages) { const k = m.text.toLowerCase(); if (!byText.has(k)) byText.set(k, []); byText.get(k).push(m); }
+  messages = [...byText.values()].map(list => list[list.length >> 1]);
   const scored = messages.map(m => {
     if (key === 'ai') return m.ai === undefined || m.words.length < 3 ? null : [m, m.ai];
     const s = m.scored.filter(([, v]) => Math.abs(v - 5) > delh).map(([, v]) => v);
     return s.length >= 3 ? [m, s.reduce((a, b) => a + b, 0) / s.length] : null;
   }).filter(Boolean).sort((a, b) => b[1] - a[1]);
   const middle = key === 'ai' ? 0 : 5;
-  return { happiest: scored.filter(([, s]) => s > middle).slice(0, n),
-    saddest: scored.filter(([, s]) => s < middle).slice(-n).reverse() };
+  return { happiest: onePerDay(scored.filter(([, s]) => s > middle), n),
+    saddest: onePerDay(scored.filter(([, s]) => s < middle).reverse(), n) };
+}
+
+// Take the first n, but at most one from any day, so one great (or awful) day doesn't fill the list
+export function onePerDay(list, n, dateOf = x => x[0].date) {
+  const days = new Set(), out = [];
+  for (const x of list) {
+    const d = dateOf(x).toDateString();
+    if (days.has(d)) continue;
+    days.add(d); out.push(x);
+    if (out.length === n) break;
+  }
+  return out;
 }

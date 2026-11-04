@@ -1,6 +1,6 @@
 // The AI Lab: runs the emotion model in a worker, saves readings in this browser, and draws the results
 import { state, $, esc, who, selected, drawChart, fmtBucket, msgLi, lineChart } from './ui.js';
-import { bucketList, bucketStart, extremeMessages } from './analysis.js';
+import { bucketList, bucketStart, extremeMessages, onePerDay } from './analysis.js';
 
 // Same order as GROUPS in sentiment-worker.js
 export const EMOTIONS = [['love', '💖', '#ff00cc'], ['joy', '😁', '#ffb300'], ['amusement', '🤣', '#2ecc00'], ['gratitude', '🙏', '#00c48c'],
@@ -9,7 +9,9 @@ export const EMOTIONS = [['love', '💖', '#ff00cc'], ['joy', '😁', '#ffb300']
 const MODEL_FILE = 'roberta-base-go_emotions';
 // Messages per second for short, text-message sized messages. Measured ~970/s on an RTX 50 series card, ~35/s on its processor
 const AI_RATE = { gpu: { fast: 1000, slow: 300, download: '500 MB' }, cpu: { fast: 30, slow: 10, download: '125 MB' } };
-let onDone = () => {}, worker = null;
+let onDone = () => {}, worker = null, outdated = false;
+// Bump when the way messages are scored changes, so old saved readings get re-read
+const SCORING_VERSION = 2;
 
 let gpuCheck = null;
 const hasGpu = () => (gpuCheck ??= (async () => {
@@ -84,11 +86,15 @@ async function showEstimate() {
   const span = hi < 1 ? 'under a minute' : lo < 1 ? `up to ${Math.ceil(hi)} min`
     : hi < 90 ? `about ${Math.round(lo)}–${Math.ceil(hi)} min` : `about ${(lo / 60).toFixed(1)}–${(hi / 60).toFixed(1)} hours`;
   const download = await modelCached(gpu) ? 'model already downloaded' : `plus a one-time ${rate.download} download`;
-  $('ai-estimate').textContent = `⏱️ ${todo.length.toLocaleString()} different messages to read on your ${gpu ? 'graphics card 🚀' : 'processor'}: ${span} (${download}). You can stop any time and carry on later.`;
+  const why = outdated ? '🆕 Mood scoring has been improved, so this chat needs reading again. ' : '';
+  $('ai-estimate').textContent = `${why}⏱️ ${todo.length.toLocaleString()} different messages to read on your ${gpu ? 'graphics card 🚀' : 'processor'}: ${span} (${download}). You can stop any time and carry on later.`;
 }
 
 export async function aiChatLoaded(chatKey) {
-  readings = (await loadSaved(chatKey))?.readings || {};
+  // Readings made with an older way of scoring are dropped, and the page asks for a re-read
+  const saved = await loadSaved(chatKey);
+  outdated = !!saved && saved.version !== SCORING_VERSION && Object.keys(saved.readings || {}).length > 0;
+  readings = outdated ? {} : saved?.readings || {};
   apply();
   $('ai-progress').hidden = true; $('ai-run').disabled = false;
   $('ai-forget').hidden = !state.aiDone;
@@ -107,7 +113,7 @@ export function setupAI(rerender) {
   $('ai-stop').addEventListener('click', () => {
     if (!worker) return;
     worker.terminate(); worker = null;
-    save(state.chatKey, { readings }); apply();
+    save(state.chatKey, { readings, version: SCORING_VERSION }); apply();
     $('ai-stop').hidden = true; $('ai-run').disabled = false;
     $('ai-progress').querySelector('.ptext').textContent = '⏸ Stopped. Progress saved.';
     $('ai-forget').hidden = !state.aiDone;
@@ -116,6 +122,7 @@ export function setupAI(rerender) {
   $('ai-run').addEventListener('click', async () => {
     const byText = distinctTexts();
     const todo = [...byText.keys()].filter(k => !readings[k]);
+    outdated = false;
     const chatKey = state.chatKey;
     $('ai-run').disabled = true; $('ai-estimate').textContent = '';
     $('ai-progress').hidden = false; $('ai-stop').hidden = false;
@@ -139,10 +146,10 @@ export function setupAI(rerender) {
         const eta = (Date.now() - started) / data.done * (data.total - data.done) / 1000;
         txt.textContent = `Reading messages… ${data.done.toLocaleString()} / ${data.total.toLocaleString()} (about ${Math.ceil(eta / 60)} min left)`;
         if (sinceSave >= 512 || data.done === data.total) {
-          sinceSave = 0; save(chatKey, { readings }); apply(); $('ai-forget').hidden = false; onDone();
+          sinceSave = 0; save(chatKey, { readings, version: SCORING_VERSION }); apply(); $('ai-forget').hidden = false; onDone();
         }
       }
-      if (data.type === 'finished') { txt.textContent = '✅ Done! Vibes read.'; end(); save(chatKey, { readings }); apply(); showEstimate(); onDone(); }
+      if (data.type === 'finished') { txt.textContent = '✅ Done! Vibes read.'; end(); save(chatKey, { readings, version: SCORING_VERSION }); apply(); showEstimate(); onDone(); }
       if (data.type === 'error') { txt.textContent = '⚠️ ' + data.message; $('ai-run').disabled = false; end(); showEstimate(); }
     };
     w.postMessage({ useGpu, texts: todo.map(k => state.messages[byText.get(k)[0]].text), ids: todo.map((_, k) => k) });
@@ -196,6 +203,7 @@ export function renderAI(tl) {
 function renderEmotionMessages() {
   const k = +$('emo-pick').value || 0, seen = new Set();
   const top = selected().filter(m => m.emo && m.words.length >= 3).sort((a, b) => b.emo[k] - a.emo[k])
-    .filter(m => !seen.has(keyOf(m)) && seen.add(keyOf(m))).slice(0, 6);
-  $('emo-msgs').innerHTML = top.map(m => msgLi(m)).join('');
+    .filter(m => !seen.has(keyOf(m)) && seen.add(keyOf(m)));
+  const top6 = onePerDay(top, 6, m => m.date);
+  $('emo-msgs').innerHTML = top6.map(m => msgLi(m)).join('');
 }
